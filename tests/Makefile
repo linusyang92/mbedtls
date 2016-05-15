@@ -52,6 +52,7 @@ APPS =	test_suite_aes.ecb$(EXEXT)	test_suite_aes.cbc$(EXEXT)	\
 	test_suite_base64$(EXEXT)	test_suite_blowfish$(EXEXT)	\
 	test_suite_camellia$(EXEXT)	test_suite_ccm$(EXEXT)		\
 	test_suite_cmac$(EXEXT)						\
+	test_suite_chacha20$(EXEXT)								\
 	test_suite_cipher.aes$(EXEXT)					\
 	test_suite_cipher.arc4$(EXEXT)	test_suite_cipher.ccm$(EXEXT)	\
 	test_suite_cipher.gcm$(EXEXT)					\
@@ -247,6 +248,10 @@ test_suite_ccm$(EXEXT): test_suite_ccm.c $(DEP)
 	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) $<	$(LOCAL_LDFLAGS) $(LDFLAGS) -o $@
 
 test_suite_cmac$(EXEXT): test_suite_cmac.c $(DEP)
+	echo "  CC    $<"
+	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) $<	$(LOCAL_LDFLAGS) $(LDFLAGS) -o $@
+
+test_suite_chacha20$(EXEXT): test_suite_chacha20.c $(DEP)
 	echo "  CC    $<"
 	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) $<	$(LOCAL_LDFLAGS) $(LDFLAGS) -o $@
 

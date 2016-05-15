@@ -30,14 +30,13 @@ if( @ARGV ) {
 my $error_format_file = $data_dir.'/error.fmt';
 
 my @low_level_modules = qw( AES ARC4 ASN1 BASE64 BIGNUM BLOWFISH
-                            CAMELLIA CCM CMAC CTR_DRBG DES
+                            CAMELLIA CHACHA20 CCM CMAC CTR_DRBG DES
                             ENTROPY GCM HMAC_DRBG MD2 MD4 MD5
                             NET OID PADLOCK PBKDF2 RIPEMD160
                             SHA1 SHA256 SHA512 THREADING XTEA );
 my @high_level_modules = qw( CIPHER DHM ECP MD
                              PEM PK PKCS12 PKCS5
                              RSA SSL X509 );
-
 my $line_separator = $/;
 undef $/;
 

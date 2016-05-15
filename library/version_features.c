@@ -102,6 +102,9 @@ static const char *features[] = {
 #if defined(MBEDTLS_CMAC_ALT)
     "MBEDTLS_CMAC_ALT",
 #endif /* MBEDTLS_CMAC_ALT */
+#if defined(MBEDTLS_CHACHA20_ALT)
+    "MBEDTLS_CHACHA20_ALT",
+#endif /* MBEDTLS_CHACHA20_ALT */
 #if defined(MBEDTLS_DES_ALT)
     "MBEDTLS_DES_ALT",
 #endif /* MBEDTLS_DES_ALT */
@@ -525,6 +528,9 @@ static const char *features[] = {
 #if defined(MBEDTLS_CAMELLIA_C)
     "MBEDTLS_CAMELLIA_C",
 #endif /* MBEDTLS_CAMELLIA_C */
+#if defined(MBEDTLS_CHACHA20_C)
+    "MBEDTLS_CHACHA20_C",
+#endif /* MBEDTLS_CHACHA20_C */
 #if defined(MBEDTLS_CCM_C)
     "MBEDTLS_CCM_C",
 #endif /* MBEDTLS_CCM_C */
