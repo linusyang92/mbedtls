@@ -84,6 +84,7 @@ typedef enum {
     MBEDTLS_CIPHER_ID_CAMELLIA,
     MBEDTLS_CIPHER_ID_BLOWFISH,
     MBEDTLS_CIPHER_ID_ARC4,
+    MBEDTLS_CIPHER_ID_CHACHA20
 } mbedtls_cipher_id_t;
 
 /**
@@ -143,6 +144,7 @@ typedef enum {
     MBEDTLS_CIPHER_CAMELLIA_128_CCM,
     MBEDTLS_CIPHER_CAMELLIA_192_CCM,
     MBEDTLS_CIPHER_CAMELLIA_256_CCM,
+    MBEDTLS_CIPHER_CHACHA20
 } mbedtls_cipher_type_t;
 
 /** Supported cipher modes. */
@@ -188,7 +190,7 @@ enum {
 /** Maximum length of any IV, in Bytes. */
 #define MBEDTLS_MAX_IV_LENGTH      16
 /** Maximum block size of any cipher, in Bytes. */
-#define MBEDTLS_MAX_BLOCK_LENGTH   16
+#define MBEDTLS_MAX_BLOCK_LENGTH   64
 
 /**
  * Base cipher information (opaque struct).
