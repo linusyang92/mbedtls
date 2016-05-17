@@ -45,7 +45,8 @@ ifdef ZLIB
 LOCAL_LDFLAGS += -lz
 endif
 
-APPS =	test_suite_aes.ecb$(EXEXT)	test_suite_aes.cbc$(EXEXT)	\
+APPS = test_suite_aead_chacha20_poly1305$(EXEXT)			\
+	test_suite_aes.ecb$(EXEXT)	test_suite_aes.cbc$(EXEXT)	\
 	test_suite_aes.cfb$(EXEXT)	test_suite_aes.rest$(EXEXT)	\
 	test_suite_aes.ctr$(EXEXT) \
 	test_suite_arc4$(EXEXT)		test_suite_asn1write$(EXEXT)	\
@@ -208,6 +209,11 @@ test_suite_hmac_drbg.pr.c : suites/test_suite_hmac_drbg.function suites/test_sui
 %.c : suites/%.function suites/%.data scripts/generate_code.pl suites/helpers.function suites/main_test.function
 	echo "  Gen   $@"
 	perl scripts/generate_code.pl suites $* $*
+	
+
+test_suite_aead_chacha20_poly1305$(EXEXT): test_suite_aead_chacha20_poly1305.c $(DEP)
+	echo "  CC    $<"
+	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) $<	$(LOCAL_LDFLAGS) $(LDFLAGS) -o $@
 
 test_suite_aes.ecb$(EXEXT): test_suite_aes.ecb.c $(DEP)
 	echo "  CC    $<"
