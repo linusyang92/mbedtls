@@ -68,6 +68,9 @@
  * PBKDF2    1  0x007C-0x007C
  * HMAC_DRBG 4                  0x0003-0x0009
  * CCM       3                  0x000D-0x0011
+ * ChaCha20             1       0x0011-0x0011
+ * Poly1305             1       0x0013-0x0013
+ * ChaCha20+Poly1305    2       0x0015-0x0017
  * ARC4      1                  0x0019-0x0019
  * MD2       1                  0x002B-0x002B
  * MD4       1                  0x002D-0x002D
