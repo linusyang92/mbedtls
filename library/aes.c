@@ -42,6 +42,9 @@
 #if defined(MBEDTLS_AESNI_C)
 #include "mbedtls/aesni.h"
 #endif
+#if defined(MBEDTLS_AESARM_C)
+#include "mbedtls/aesarm.h"
+#endif
 
 #if defined(MBEDTLS_SELF_TEST)
 #if defined(MBEDTLS_PLATFORM_C)
@@ -849,6 +852,11 @@ int mbedtls_aes_crypt_ecb( mbedtls_aes_context *ctx,
 #if defined(MBEDTLS_AESNI_C) && defined(MBEDTLS_HAVE_X86_64)
     if( mbedtls_aesni_has_support( MBEDTLS_AESNI_AES ) )
         return( mbedtls_aesni_crypt_ecb( ctx, mode, input, output ) );
+#endif
+
+#if defined(MBEDTLS_AESARM_C) && defined(MBEDTLS_HAVE_ARM64)
+    if( mbedtls_aesarm_has_support() )
+        return( mbedtls_aesarm_crypt_ecb( ctx, mode, input, output ) );
 #endif
 
 #if defined(MBEDTLS_PADLOCK_C) && defined(MBEDTLS_HAVE_X86)
