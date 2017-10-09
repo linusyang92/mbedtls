@@ -12,6 +12,10 @@ ifdef DEBUG
 LOCAL_CFLAGS += -g3
 endif
 
+ifdef ARM64
+LOCAL_CFLAGS += -march=armv8-a+crypto -mcpu=cortex-a53
+endif
+
 # MicroBlaze specific options:
 # CFLAGS += -mno-xl-soft-mul -mxl-barrel-shift
 
@@ -45,6 +49,7 @@ DLEXT=dll
 endif
 
 OBJS_CRYPTO=	aes.o		aesni.o		arc4.o		\
+		aesarm.o \
 		asn1parse.o	asn1write.o	base64.o	\
 		bignum.o	blowfish.o	camellia.o	\
 		ccm.o		cipher.o	cipher_wrap.o	\
