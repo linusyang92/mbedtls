@@ -1574,6 +1574,20 @@
 #define MBEDTLS_AESNI_C
 
 /**
+ * \def MBEDTLS_AESARM_C
+ *
+ * Enable AES armv8 support.
+ *
+ * Module:  library/aesarm.c
+ * Caller:  library/aes.c
+ *
+ * Requires: MBEDTLS_HAVE_ASM
+ *
+ * This modules adds support for the AES instructions on armv8
+ */
+#define MBEDTLS_AESARM_C
+
+/**
  * \def MBEDTLS_AES_C
  *
  * Enable the AES block cipher.

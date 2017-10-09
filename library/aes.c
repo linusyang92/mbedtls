@@ -42,6 +42,11 @@
 #if defined(MBEDTLS_AESNI_C)
 #include "mbedtls/aesni.h"
 #endif
+#if defined(MBEDTLS_AESARM_C)
+#include "mbedtls/aesarm.h"
+#endif
+
+#include "mbedtls/aesasm.h"
 
 #if defined(MBEDTLS_SELF_TEST)
 #if defined(MBEDTLS_PLATFORM_C)
@@ -519,6 +524,11 @@ int mbedtls_aes_setkey_enc( mbedtls_aes_context *ctx, const unsigned char *key,
         return( mbedtls_aesni_setkey_enc( (unsigned char *) ctx->rk, key, keybits ) );
 #endif
 
+#if defined(MBEDTLS_AES_USE_ASM)
+    mbedtls_asm_set_encrypt_key(key, keybits, (AES_KEY *) ctx->rk);
+    return 0;
+#endif
+
     for( i = 0; i < ( keybits >> 5 ); i++ )
     {
         GET_UINT32_LE( RK[i], key, i << 2 );
@@ -603,6 +613,19 @@ int mbedtls_aes_setkey_dec( mbedtls_aes_context *ctx, const unsigned char *key,
     uint32_t *RK;
     uint32_t *SK;
 
+#if defined(MBEDTLS_AES_USE_ASM)
+    switch( keybits )
+    {
+        case 128: ctx->nr = 10; break;
+        case 192: ctx->nr = 12; break;
+        case 256: ctx->nr = 14; break;
+        default : return( MBEDTLS_ERR_AES_INVALID_KEY_LENGTH );
+    }
+    ctx->rk = RK = ctx->buf;
+    mbedtls_asm_set_decrypt_key(key, keybits, (AES_KEY *) ctx->rk);
+    return 0;
+#endif
+
     mbedtls_aes_init( &cty );
 
 #if defined(MBEDTLS_PADLOCK_C) && defined(MBEDTLS_PADLOCK_ALIGN16)
@@ -629,6 +652,8 @@ int mbedtls_aes_setkey_dec( mbedtls_aes_context *ctx, const unsigned char *key,
         goto exit;
     }
 #endif
+
+
 
     SK = cty.rk + cty.nr * 4;
 
@@ -849,6 +874,20 @@ int mbedtls_aes_crypt_ecb( mbedtls_aes_context *ctx,
 #if defined(MBEDTLS_AESNI_C) && defined(MBEDTLS_HAVE_X86_64)
     if( mbedtls_aesni_has_support( MBEDTLS_AESNI_AES ) )
         return( mbedtls_aesni_crypt_ecb( ctx, mode, input, output ) );
+#endif
+
+#if defined(MBEDTLS_AESARM_C) && defined(MBEDTLS_HAVE_ARM64)
+    if( mbedtls_aesarm_has_support() )
+        return( mbedtls_aesarm_crypt_ecb( ctx, mode, input, output ) );
+#endif
+
+#if defined(MBEDTLS_AES_USE_ASM)
+    if( mode == MBEDTLS_AES_ENCRYPT ) {
+        mbedtls_asm_encrypt(input, output, (AES_KEY *) ctx->rk);
+    } else {
+        mbedtls_asm_decrypt(input, output, (AES_KEY *) ctx->rk);
+    }
+    return 0;
 #endif
 
 #if defined(MBEDTLS_PADLOCK_C) && defined(MBEDTLS_HAVE_X86)
