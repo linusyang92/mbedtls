@@ -483,6 +483,22 @@ void mbedtls_aes_free( mbedtls_aes_context *ctx )
 /*
  * AES key schedule (encryption)
  */
+#if defined(ANDROID_USE_ASM)
+/* OpenSSL assembly functions */
+#define AES_MAXNR 14
+typedef struct {
+  uint32_t rd_key[4 * (AES_MAXNR + 1)];
+  uint32_t rounds;
+} AES_KEY;
+int AES_set_encrypt_key(const unsigned char *userKey, const int bits,
+                        AES_KEY *key);
+int AES_set_decrypt_key(const unsigned char *userKey, const int bits,
+                        AES_KEY *key);
+void AES_encrypt(const unsigned char *in, unsigned char *out,
+                 const AES_KEY *key);
+void AES_decrypt(const unsigned char *in, unsigned char *out,
+                 const AES_KEY *key);
+#endif
 #if !defined(MBEDTLS_AES_SETKEY_ENC_ALT)
 int mbedtls_aes_setkey_enc( mbedtls_aes_context *ctx, const unsigned char *key,
                     unsigned int keybits )
@@ -520,6 +536,11 @@ int mbedtls_aes_setkey_enc( mbedtls_aes_context *ctx, const unsigned char *key,
 #if defined(MBEDTLS_AESNI_C) && defined(MBEDTLS_HAVE_X86_64)
     if( mbedtls_aesni_has_support( MBEDTLS_AESNI_AES ) )
         return( mbedtls_aesni_setkey_enc( (unsigned char *) ctx->rk, key, keybits ) );
+#endif
+
+#if defined(ANDROID_USE_ASM)
+    AES_set_encrypt_key(key, keybits, (AES_KEY *) ctx->rk);
+    return 0;
 #endif
 
     for( i = 0; i < ( keybits >> 5 ); i++ )
@@ -606,6 +627,19 @@ int mbedtls_aes_setkey_dec( mbedtls_aes_context *ctx, const unsigned char *key,
     uint32_t *RK;
     uint32_t *SK;
 
+#if defined(ANDROID_USE_ASM)
+    switch( keybits )
+    {
+        case 128: ctx->nr = 10; break;
+        case 192: ctx->nr = 12; break;
+        case 256: ctx->nr = 14; break;
+        default : return( MBEDTLS_ERR_AES_INVALID_KEY_LENGTH );
+    }
+    ctx->rk = RK = ctx->buf;
+    AES_set_decrypt_key(key, keybits, (AES_KEY *) ctx->rk);
+    return 0;
+#endif
+
     mbedtls_aes_init( &cty );
 
 #if defined(MBEDTLS_PADLOCK_C) && defined(MBEDTLS_PADLOCK_ALIGN16)
@@ -632,6 +666,8 @@ int mbedtls_aes_setkey_dec( mbedtls_aes_context *ctx, const unsigned char *key,
         goto exit;
     }
 #endif
+
+
 
     SK = cty.rk + cty.nr * 4;
 
@@ -857,6 +893,15 @@ int mbedtls_aes_crypt_ecb( mbedtls_aes_context *ctx,
 #if defined(MBEDTLS_AESARM_C) && defined(MBEDTLS_HAVE_ARM64)
     if( mbedtls_aesarm_has_support() )
         return( mbedtls_aesarm_crypt_ecb( ctx, mode, input, output ) );
+#endif
+
+#if defined(ANDROID_USE_ASM)
+    if( mode == MBEDTLS_AES_ENCRYPT ) {
+        AES_encrypt(input, output, (AES_KEY *) ctx->rk);
+    } else {
+        AES_decrypt(input, output, (AES_KEY *) ctx->rk);
+    }
+    return 0;
 #endif
 
 #if defined(MBEDTLS_PADLOCK_C) && defined(MBEDTLS_HAVE_X86)
