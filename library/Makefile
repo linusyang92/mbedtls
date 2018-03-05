@@ -49,7 +49,7 @@ DLEXT=dll
 endif
 
 OBJS_CRYPTO=	aes.o		aesni.o		arc4.o		\
-		aesarm.o \
+		aesarm.o	aesasm.o	aesasm_wrap.o	\
 		asn1parse.o	asn1write.o	base64.o	\
 		bignum.o	blowfish.o	camellia.o	\
 		ccm.o		cipher.o	cipher_wrap.o	\
@@ -164,6 +164,10 @@ libmbedcrypto.dll: $(OBJS_CRYPTO)
 
 .c.o:
 	echo "  CC    $<"
+	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) -c $<
+
+.S.o:
+	echo " ASM    $<"
 	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) -c $<
 
 clean:
