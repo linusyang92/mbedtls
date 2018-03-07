@@ -20,8 +20,7 @@ lib:
 tests: lib
 	$(MAKE) -C tests
 
-ifndef WINDOWS
-install: no_test
+install: lib
 	mkdir -p $(DESTDIR)/include/mbedtls
 	cp -r include/mbedtls $(DESTDIR)/include
 	
@@ -52,7 +51,6 @@ uninstall:
 	        rm -f $(DESTDIR)/bin/$$f ;      \
 	    fi                                  \
 	done
-endif
 
 WARNING_BORDER      =*******************************************************\n
 NULL_ENTROPY_WARN_L1=****  WARNING!  MBEDTLS_TEST_NULL_ENTROPY defined! ****\n
