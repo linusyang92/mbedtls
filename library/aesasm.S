@@ -5,7 +5,6 @@
 
 #if MBEDTLS_AES_I386_WIN
     #include "asm/i386_win.S"
-    #include "asm/i386_aesni_win.S"
 #endif
 
 #if MBEDTLS_AES_ARM_LINUX

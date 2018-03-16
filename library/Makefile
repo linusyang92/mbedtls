@@ -50,6 +50,7 @@ endif
 
 OBJS_CRYPTO=	aes.o		aesni.o		arc4.o		\
 		aesarm.o	aesasm.o	aesasm_wrap.o	\
+		aesasm_hard.o					\
 		asn1parse.o	asn1write.o	base64.o	\
 		bignum.o	blowfish.o	camellia.o	\
 		ccm.o		cipher.o	cipher_wrap.o	\
