@@ -3,6 +3,7 @@
 #include "mbedtls/aesasm.h"
 #include "mbedtls/aesarm.h"
 
+#ifndef MBEDTLS_HAVE_ARM64
 /*
  * AES-NI support detection routine
  */
@@ -29,6 +30,7 @@ static int aesni_supported()
     return 0;
 #endif
 }
+#endif
 
 static int hardaes_supported(void)
 {

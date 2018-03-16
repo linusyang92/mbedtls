@@ -32,7 +32,7 @@
 #include "aes.h"
 
 #if defined(MBEDTLS_HAVE_ASM) && defined(__GNUC__) &&  \
-    defined(__aarch64__) && defined(__linux__) && \
+    defined(__aarch64__) && (defined(__linux__) || defined(_WIN32)) && \
     ! defined(MBEDTLS_HAVE_ARM64)
 #define MBEDTLS_HAVE_ARM64
 #endif

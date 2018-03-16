@@ -41,8 +41,10 @@
 
 #if defined(MBEDTLS_HAVE_ARM64)
 
+#ifndef _WIN32
 #include <sys/auxv.h>
 #include <asm/hwcap.h>
+#endif
 #include <arm_neon.h>
 
 /*
@@ -50,6 +52,7 @@
  */
 int mbedtls_aesarm_has_support( void )
 {
+#ifndef _WIN32
     static int done = 0;
     static unsigned int c = 0;
 
@@ -60,6 +63,9 @@ int mbedtls_aesarm_has_support( void )
     }
 
     return ( c & HWCAP_AES ) != 0;
+#else
+    return 1;
+#endif
 }
 
 /*
