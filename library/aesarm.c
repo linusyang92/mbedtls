@@ -41,7 +41,7 @@
 
 #if defined(MBEDTLS_HAVE_ARM64)
 
-#ifndef _WIN32
+#ifdef __linux__
 #include <sys/auxv.h>
 #include <asm/hwcap.h>
 #endif
@@ -52,7 +52,7 @@
  */
 int mbedtls_aesarm_has_support( void )
 {
-#ifndef _WIN32
+#ifdef __linux__
     static int done = 0;
     static unsigned int c = 0;
 
