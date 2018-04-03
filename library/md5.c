@@ -118,9 +118,19 @@ void mbedtls_md5_starts( mbedtls_md5_context *ctx )
 #endif
 
 #if !defined(MBEDTLS_MD5_PROCESS_ALT)
+
+#if defined(__i386__) || defined(__amd64__)
+
+extern void md5_compress(uint32_t state[4], const unsigned char data[64]);
+
+#endif
+
 int mbedtls_internal_md5_process( mbedtls_md5_context *ctx,
                                   const unsigned char data[64] )
 {
+#if defined(__i386__) || defined(__amd64__)
+    md5_compress(ctx->state, data);
+#else
     uint32_t X[16], A, B, C, D;
 
     GET_UINT32_LE( X[ 0], data,  0 );
@@ -241,6 +251,7 @@ int mbedtls_internal_md5_process( mbedtls_md5_context *ctx,
     ctx->state[2] += C;
     ctx->state[3] += D;
 
+#endif
     return( 0 );
 }
 

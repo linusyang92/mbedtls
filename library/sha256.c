@@ -164,6 +164,119 @@ static const uint32_t K[] =
     0x90BEFFFA, 0xA4506CEB, 0xBEF9A3F7, 0xC67178F2,
 };
 
+#if defined(__i386__) || defined(__amd64__)
+
+extern void sha256_compress(uint32_t state[8], const unsigned char data[64]);
+
+#elif defined(__aarch64__)
+
+#include <arm_neon.h>
+
+#define Rx(T0, T1, K, W0, W1, W2, W3)  \
+	W0 = vsha256su0q_u32( W0, W1 );    \
+	d2 = d0;                           \
+    T1 = vaddq_u32( W1, K );           \
+    d0 = vsha256hq_u32( d0, d1, T0 );  \
+    d1 = vsha256h2q_u32( d1, d2, T0 ); \
+	W0 = vsha256su1q_u32( W0, W2, W3 );
+
+#define Ry(T0, T1, K,    W1         )  \
+	d2 = d0;                           \
+    T1 = vaddq_u32( W1, K  );          \
+    d0 = vsha256hq_u32( d0, d1, T0 );  \
+    d1 = vsha256h2q_u32( d1, d2, T0 );
+
+#define Rz(T0                       )  \
+	d2 = d0;                           \
+    d0 = vsha256hq_u32( d0, d1, T0 );  \
+    d1 = vsha256h2q_u32( d1, d2, T0 );
+
+void mbedtls_armv8a_ce_sha256_process( mbedtls_sha256_context *ctx, const unsigned char data[64] )
+{
+	/* declare variables */
+
+	uint32x4_t k0, k1, k2, k3, k4, k5, k6, k7, k8, k9, ka, kb, kc, kd, ke, kf;
+	uint32x4_t s0, s1;
+	uint32x4_t w0, w1, w2, w3;
+	uint32x4_t d0, d1, d2;
+	uint32x4_t t0, t1;
+
+	/* set K0..Kf constants */
+
+	k0 = vld1q_u32( &K[0x00] );
+	k1 = vld1q_u32( &K[0x04] );
+	k2 = vld1q_u32( &K[0x08] );
+	k3 = vld1q_u32( &K[0x0c] );
+	k4 = vld1q_u32( &K[0x10] );
+	k5 = vld1q_u32( &K[0x14] );
+	k6 = vld1q_u32( &K[0x18] );
+	k7 = vld1q_u32( &K[0x1c] );
+	k8 = vld1q_u32( &K[0x20] );
+	k9 = vld1q_u32( &K[0x24] );
+	ka = vld1q_u32( &K[0x28] );
+	kb = vld1q_u32( &K[0x2c] );
+	kc = vld1q_u32( &K[0x30] );
+	kd = vld1q_u32( &K[0x34] );
+	ke = vld1q_u32( &K[0x38] );
+	kf = vld1q_u32( &K[0x3c] );
+
+	/* load state */
+
+	s0 = vld1q_u32( &ctx->state[0] );
+	s1 = vld1q_u32( &ctx->state[4] );
+
+	/* load message */
+
+	w0 = vld1q_u32( (uint32_t const *)(data) );
+	w1 = vld1q_u32( (uint32_t const *)(data + 16) );
+	w2 = vld1q_u32( (uint32_t const *)(data + 32) );
+	w3 = vld1q_u32( (uint32_t const *)(data + 48) );
+
+	#ifdef IS_LITTLE_ENDIAN
+	w0 = vreinterpretq_u32_u8( vrev32q_u8( vreinterpretq_u8_u32( w0 ) ) );
+	w1 = vreinterpretq_u32_u8( vrev32q_u8( vreinterpretq_u8_u32( w1 ) ) );
+	w2 = vreinterpretq_u32_u8( vrev32q_u8( vreinterpretq_u8_u32( w2 ) ) );
+	w3 = vreinterpretq_u32_u8( vrev32q_u8( vreinterpretq_u8_u32( w3 ) ) );
+	#endif
+
+	/* initialize t0, d0, d1 */
+
+	t0 = vaddq_u32( w0, k0 );
+	d0 = s0;
+	d1 = s1;
+
+	/* perform rounds of four */
+
+    Rx( t0, t1, k1, w0, w1, w2, w3 );
+    Rx( t1, t0, k2, w1, w2, w3, w0 );
+    Rx( t0, t1, k3, w2, w3, w0, w1 );
+    Rx( t1, t0, k4, w3, w0, w1, w2 );
+    Rx( t0, t1, k5, w0, w1, w2, w3 );
+    Rx( t1, t0, k6, w1, w2, w3, w0 );
+    Rx( t0, t1, k7, w2, w3, w0, w1 );
+    Rx( t1, t0, k8, w3, w0, w1, w2 );
+    Rx( t0, t1, k9, w0, w1, w2, w3 );
+    Rx( t1, t0, ka, w1, w2, w3, w0 );
+    Rx( t0, t1, kb, w2, w3, w0, w1 );
+    Rx( t1, t0, kc, w3, w0, w1, w2 );
+    Ry( t0, t1, kd,     w1         );
+    Ry( t1, t0, ke,     w2         );
+    Ry( t0, t1, kf,     w3         );
+    Rz( t1                         );
+
+    /* update state */
+
+	s0 = vaddq_u32( s0, d0 );
+	s1 = vaddq_u32( s1, d1 );
+
+	/* save state */
+
+	vst1q_u32( &ctx->state[0], s0 );
+	vst1q_u32( &ctx->state[4], s1 );
+}
+
+#else
+
 #define  SHR(x,n) ((x & 0xFFFFFFFF) >> n)
 #define ROTR(x,n) (SHR(x,n) | (x << (32 - n)))
 
@@ -189,9 +302,16 @@ static const uint32_t K[] =
     d += temp1; h = temp1 + temp2;              \
 }
 
+#endif
+
 int mbedtls_internal_sha256_process( mbedtls_sha256_context *ctx,
                                 const unsigned char data[64] )
 {
+#if defined(__i386__) || defined(__amd64__)
+    sha256_compress(ctx->state, data);
+#elif defined(__aarch64__)
+    mbedtls_armv8a_ce_sha256_process(ctx, data);
+#else
     uint32_t temp1, temp2, W[64];
     uint32_t A[8];
     unsigned int i;
@@ -244,6 +364,7 @@ int mbedtls_internal_sha256_process( mbedtls_sha256_context *ctx,
     for( i = 0; i < 8; i++ )
         ctx->state[i] += A[i];
 
+#endif
     return( 0 );
 }
 
