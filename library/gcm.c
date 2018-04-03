@@ -116,7 +116,7 @@ static int gcm_gen_table( mbedtls_gcm_context *ctx )
     if( ( ret = mbedtls_cipher_update( &ctx->cipher_ctx, h, 16, h, &olen ) ) != 0 )
         return( ret );
 
-#if defined(MBEDTLS_AESARM_C)
+#if defined(MBEDTLS_AESARM_C) && defined(MBEDTLS_HAVE_ARM64)
    // we don't do feature testing with ARMv8 cryptography extensions
     memcpy( ctx ->HL, h, 16 );          // put H at the beginning of buffer
     return( 0 );                        // that's all we need
@@ -226,7 +226,7 @@ static void gcm_mult( mbedtls_gcm_context *ctx, const unsigned char x[16],
     unsigned char lo, hi, rem;
     uint64_t zh, zl;
 
-#if defined(MBEDTLS_AESARM_C)
+#if defined(MBEDTLS_AESARM_C) && defined(MBEDTLS_HAVE_ARM64)
    mbedtls_aesarm_gcm_mult( output, x, (const unsigned char *) ctx->HL );
    return;
 #endif
