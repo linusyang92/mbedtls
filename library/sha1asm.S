@@ -24,7 +24,7 @@
 #if defined(__i386__)
  
 /* void sha1_compress(uint32_t state[static 5], const uint8_t block[static 64]) */
-#ifndef _WIN32
+#if !(defined(_WIN32) || defined(__APPLE__))
 .globl sha1_compress
 sha1_compress:
 #else
@@ -225,8 +225,13 @@ _sha1_compress:
 #elif defined(__amd64__)
 
 /* void sha1_compress(uint32_t state[static 5], const uint8_t block[static 64]) */
+#if !defined(__APPLE__)
 .globl sha1_compress
 sha1_compress:
+#else
+.globl _sha1_compress
+_sha1_compress:
+#endif
 	/* 
 	 * Storage usage:
 	 *   Bytes  Location  Description

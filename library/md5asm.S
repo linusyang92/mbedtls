@@ -24,7 +24,7 @@
 #if defined(__i386__)
 
 /* void md5_compress(uint32_t state[static 4], const uint8_t block[static 64]) */
-#ifndef _WIN32
+#if !(defined(_WIN32) || defined(__APPLE__))
 .globl md5_compress
 md5_compress:
 #else
@@ -188,8 +188,13 @@ _md5_compress:
 #elif defined(__amd64__)
 
 /* void md5_compress(uint32_t state[static 4], const uint8_t block[static 64]) */
+#if !defined(__APPLE__)
 .globl md5_compress
 md5_compress:
+#else
+.globl _md5_compress
+_md5_compress:
+#endif
 	/* 
 	 * Storage usage:
 	 *   Bytes  Location  Description
