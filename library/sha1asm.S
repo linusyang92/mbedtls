@@ -24,8 +24,13 @@
 #if defined(__i386__)
  
 /* void sha1_compress(uint32_t state[static 5], const uint8_t block[static 64]) */
+#ifndef _WIN32
 .globl sha1_compress
 sha1_compress:
+#else
+.globl _sha1_compress
+_sha1_compress:
+#endif
 	/* 
 	 * Storage usage:
 	 *   Bytes  Location  Description
@@ -305,6 +310,12 @@ sha1_compress:
 	subq    $64, %rsp
 	
 	/* Load arguments */
+#ifdef _WIN32
+	movq    %rsi, %xmm2
+	movq    %rdi, %xmm3
+	movq    %rcx, %rdi
+	movq    %rdx, %rsi
+#endif
 	movq    %rdi, %r8
 	movl     0(%rdi), %eax  /* a */
 	movl     4(%rdi), %ebx  /* b */
@@ -312,7 +323,7 @@ sha1_compress:
 	movl    12(%rdi), %edx  /* d */
 	movl    16(%rdi), %ebp  /* e */
 	movq    %rsi, %rdi
-	
+
 	/* 80 rounds of hashing */
 	ROUND0a(eax, ebx, ecx, edx, ebp,  0)
 	ROUND0a(ebp, eax, ebx, ecx, edx,  1)
@@ -405,6 +416,10 @@ sha1_compress:
 	/* Restore registers */
 	movq    %xmm0, %rbx
 	movq    %xmm1, %rbp
+#ifdef _WIN32
+	movq    %xmm2, %rsi
+	movq    %xmm3, %rdi
+#endif
 	addq    $64, %rsp
 	retq
     

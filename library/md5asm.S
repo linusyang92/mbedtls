@@ -24,8 +24,13 @@
 #if defined(__i386__)
 
 /* void md5_compress(uint32_t state[static 4], const uint8_t block[static 64]) */
+#ifndef _WIN32
 .globl md5_compress
 md5_compress:
+#else
+.globl _md5_compress
+_md5_compress:
+#endif
 	/* 
 	 * Storage usage:
 	 *   Bytes  Location  Description
@@ -246,6 +251,12 @@ md5_compress:
 	movq  %rbp, %xmm1
 	
 	/* Load arguments */
+#ifdef _WIN32
+	movq  %rsi, %xmm2
+	movq  %rdi, %xmm3
+	movq  %rcx, %rdi
+	movq  %rdx, %rsi
+#endif
 	movq  %rsi, %rbp
 	movl   0(%rdi), %eax  /* a */
 	movl   4(%rdi), %ebx  /* b */
@@ -328,6 +339,10 @@ md5_compress:
 	/* Restore registers */
 	movq  %xmm0, %rbx
 	movq  %xmm1, %rbp
+#ifdef _WIN32
+	movq  %xmm2, %rsi
+	movq  %xmm3, %rdi
+#endif
 	retq
     
 #endif

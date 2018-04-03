@@ -24,8 +24,13 @@
 #if defined(__i386__)
 
 /* void sha256_compress(uint32_t state[static 8], const uint8_t block[static 64]) */
+#ifndef _WIN32
 .globl sha256_compress
 sha256_compress:
+#else
+.globl _sha256_compress
+_sha256_compress:
+#endif
 	/* 
 	 * Storage usage:
 	 *   Bytes  Location   Description
@@ -340,6 +345,12 @@ sha256_compress:
 	subq  $64, %rsp
 	
 	/* Load state */
+#ifdef _WIN32
+	movq  %rsi, %xmm7
+	movq  %rdi, %xmm8
+	movq  %rcx, %rdi
+	movq  %rdx, %rsi
+#endif
 	movl   0(%rdi), %r8d   /* a */
 	movl   4(%rdi), %r9d   /* b */
 	movl   8(%rdi), %r10d  /* c */
@@ -433,6 +444,10 @@ sha256_compress:
 	movq  %xmm4, %r14
 	movq  %xmm5, %r15
 	movq  %xmm6, %rbx
+#ifdef _WIN32
+	movq  %xmm7, %rsi
+	movq  %xmm8, %rdi
+#endif
 	addq  $64, %rsp
 	retq
     
