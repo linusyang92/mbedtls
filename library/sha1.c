@@ -128,6 +128,16 @@ extern void sha1_compress(uint32_t state[5], const unsigned char data[64]);
 
 #include <arm_neon.h>
 
+#if defined(__BYTE_ORDER__)
+# if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+#  define IS_BIG_ENDIAN
+# else
+#  define IS_LITTLE_ENDIAN
+# endif
+#else
+# error macro __BYTE_ORDER__ is not defined for this compiler
+#endif
+
 void mbedtls_armv8a_ce_sha1_process( mbedtls_sha1_context *ctx, const unsigned char data[64] )
 {
 	/* declare variables */

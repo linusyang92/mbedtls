@@ -191,6 +191,16 @@ extern void sha256_compress(uint32_t state[8], const unsigned char data[64]);
     d0 = vsha256hq_u32( d0, d1, T0 );  \
     d1 = vsha256h2q_u32( d1, d2, T0 );
 
+#if defined(__BYTE_ORDER__)
+# if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+#  define IS_BIG_ENDIAN
+# else
+#  define IS_LITTLE_ENDIAN
+# endif
+#else
+# error macro __BYTE_ORDER__ is not defined for this compiler
+#endif
+
 void mbedtls_armv8a_ce_sha256_process( mbedtls_sha256_context *ctx, const unsigned char data[64] )
 {
 	/* declare variables */
