@@ -35,7 +35,7 @@ static int aesni_supported()
 static int hardaes_supported(void)
 {
 #if defined(MBEDTLS_HAVE_ARM64)
-    return mbedtls_aesarm_has_support();
+    return 1;
 #else
     return aesni_supported();
 #endif

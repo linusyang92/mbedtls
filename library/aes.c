@@ -877,8 +877,7 @@ int mbedtls_aes_crypt_ecb( mbedtls_aes_context *ctx,
 #endif
 
 #if defined(MBEDTLS_AESARM_C) && defined(MBEDTLS_HAVE_ARM64)
-    if( mbedtls_aesarm_has_support() )
-        return( mbedtls_aesarm_crypt_ecb( ctx, mode, input, output ) );
+    return( mbedtls_aesarm_crypt_ecb( ctx, mode, input, output ) );
 #endif
 
 #if defined(MBEDTLS_AES_USE_ASM)

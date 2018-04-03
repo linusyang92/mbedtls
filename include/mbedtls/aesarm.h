@@ -44,13 +44,6 @@ extern "C" {
 #endif
 
 /**
- * \brief          AES armv8 features detection routine
- *
- * \return         1 if CPU has support for the feature, 0 otherwise
- */
-int mbedtls_aesarm_has_support( void );
-
-/**
  * \brief          AES armv8 AES-ECB block en(de)cryption
  *
  * \param ctx      AES context
@@ -64,6 +57,21 @@ int mbedtls_aesarm_crypt_ecb( mbedtls_aes_context *ctx,
                               int mode,
                               const unsigned char input[16],
                               unsigned char output[16] );
+
+/**
+ * \brief          Multiply in GF(2^128) for GCM
+ *
+ * \param c        Result
+ * \param a        First operand
+ * \param b        Second operand
+ *
+ * \note           Both operands and result are bit strings interpreted as
+ *                 elements of GF(2^128) as per the GCM spec.
+ */
+
+void mbedtls_aesarm_gcm_mult( unsigned char c[16],
+                              const unsigned char a[16],
+                              const unsigned char b[16] );
 
 #ifdef __cplusplus
 }
