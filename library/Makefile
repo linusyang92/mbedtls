@@ -14,6 +14,10 @@ endif
 
 ifdef ARM64
 LOCAL_CFLAGS += -march=armv8-a+crypto -mcpu=cortex-a53
+else
+ifndef NOINTEL
+LOCAL_CFLAGS += -maes -mssse3
+endif
 endif
 
 # MicroBlaze specific options:
