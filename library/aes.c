@@ -1068,8 +1068,11 @@ int mbedtls_aes_crypt_ctr( mbedtls_aes_context *ctx,
     int c, i;
     size_t n = *nc_off;
 
-#if defined(__i386__) || defined(__amd64__)
-    if (mbedtls_asm_supported() == MBEDTLS_AESASM_HAS_HARDAES) {
+#if defined(__i386__) || defined(__amd64__) || defined(__aarch64__)
+#if !defined(__aarch64__)
+    if (mbedtls_asm_supported() == MBEDTLS_AESASM_HAS_HARDAES)
+#endif
+    {
         mbedtls_asm_aesni_ctr((unsigned char *)ctx->rk, ctx->nr, length,
                               nc_off, stream_block,
                               nonce_counter, (unsigned char *)input, output);
