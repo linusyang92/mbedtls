@@ -59,6 +59,7 @@ void mbedtls_asm_decrypt(const unsigned char *in, unsigned char *out,
 #if defined(__i386__) || defined(__amd64__)
 #include <string.h>
 void mbedtls_asm_aesni_ctr(unsigned char *rk, int nr, size_t length,
+                           size_t *nc_off, unsigned char stream_block[16],
                            unsigned char nonce_counter[16],
                            unsigned char *input,
                            unsigned char *output);

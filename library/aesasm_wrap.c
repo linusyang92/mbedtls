@@ -139,39 +139,61 @@ void mbedtls_asm_decrypt(const unsigned char *in, unsigned char *out,
 #define AES_BLOCK_SIZE 16
 
 static void encrypt_ctr128(void *this_state, void *this_key,
+                           size_t *nc_off, unsigned char stream_block[16],
                            size_t len, unsigned char *in, unsigned char *out);
 static void encrypt_ctr192(void *this_state, void *this_key,
+                           size_t *nc_off, unsigned char stream_block[16],
                            size_t len, unsigned char *in, unsigned char *out);
 static void encrypt_ctr256(void *this_state, void *this_key,
+                           size_t *nc_off, unsigned char stream_block[16],
                            size_t len, unsigned char *in, unsigned char *out);
 
 void mbedtls_asm_aesni_ctr(unsigned char *rk, int nr, size_t length,
+                           size_t *nc_off, unsigned char stream_block[16],
                            unsigned char nonce_counter[16],
                            unsigned char *input,
                            unsigned char *output)
 {
     __m128i sk[15];
-    __m128i ivx;
-    int u;
+    int u, c;
+    size_t n = *nc_off;
 
-    ivx = _mm_loadu_si128((void *)nonce_counter);
-    for (u = 0; u <= nr; u++) {
-        sk[u] = _mm_loadu_si128((void *)(rk + (u << 4)));
+    if (n != 0) {
+        for (; n < 16 && length > 0; n++, length--) {
+            c = *input++;
+            *output++ = (unsigned char)( c ^ stream_block[n] );
+        }
     }
+
+    if (length == 0) {
+        n &= 0xf;
+        *nc_off = n;
+        return;
+    }
+
     switch (nr) {
         case 10:
-            encrypt_ctr128(&ivx, sk, length, input, output);
+            for (u = 0; u <= 10; u++) {
+                sk[u] = _mm_loadu_si128((void *)(rk + (u << 4)));
+            }
+            encrypt_ctr128(nonce_counter, sk, nc_off, stream_block, length, input, output);
             break;
         case 12:
-            encrypt_ctr192(&ivx, sk, length, input, output);
+            for (u = 0; u <= 12; u++) {
+                sk[u] = _mm_loadu_si128((void *)(rk + (u << 4)));
+            }
+            encrypt_ctr192(nonce_counter, sk, nc_off, stream_block, length, input, output);
             break;
         case 14:
-            encrypt_ctr256(&ivx, sk, length, input, output);
+            for (u = 0; u <= 14; u++) {
+                sk[u] = _mm_loadu_si128((void *)(rk + (u << 4)));
+            }
+            encrypt_ctr256(nonce_counter, sk, nc_off, stream_block, length, input, output);
             break;
     }
 }
 
-// AES-NI ctr mode functions from strongswan 5.6.2
+// AES-NI ctr mode functions modified from strongswan 5.6.2
 
 /*
  * Copyright (C) 2015 Martin Willi
@@ -208,6 +230,7 @@ static inline __m128i increment_be(__m128i x)
  * AES-128 CTR encryption
  */
 static void encrypt_ctr128(void *this_state, void *this_key,
+                           size_t *nc_off, unsigned char stream_block[16],
                            size_t len, unsigned char *in, unsigned char *out)
 {
     __m128i t1, t2, t3, t4;
@@ -215,10 +238,11 @@ static void encrypt_ctr128(void *this_state, void *this_key,
     __m128i *ks, state, b, *bi, *bo;
     unsigned int i, blocks, pblocks, rem;
 
-    state = _mm_load_si128((__m128i*)this_state);
+    state = _mm_loadu_si128((__m128i*)this_state);
     blocks = len / AES_BLOCK_SIZE;
     pblocks = blocks - (blocks % CTR_CRYPT_PARALLELISM);
     rem = len % AES_BLOCK_SIZE;
+    *nc_off = rem;
     bi = (__m128i*)in;
     bo = (__m128i*)out;
 
@@ -320,6 +344,7 @@ static void encrypt_ctr128(void *this_state, void *this_key,
 
         d1 = _mm_loadu_si128(&b);
         t1 = _mm_xor_si128(state, ks[0]);
+        state = increment_be(state);
 
         t1 = _mm_aesenc_si128(t1, ks[1]);
         t1 = _mm_aesenc_si128(t1, ks[2]);
@@ -332,17 +357,21 @@ static void encrypt_ctr128(void *this_state, void *this_key,
         t1 = _mm_aesenc_si128(t1, ks[9]);
 
         t1 = _mm_aesenclast_si128(t1, ks[10]);
+        _mm_storeu_si128((void *)stream_block, t1);
         t1 = _mm_xor_si128(t1, d1);
         _mm_storeu_si128(&b, t1);
 
         memcpy(bo + blocks, &b, rem);
     }
+
+    _mm_storeu_si128(this_state, state);
 }
 
 /**
  * AES-192 CTR encryption
  */
 static void encrypt_ctr192(void *this_state, void *this_key,
+                           size_t *nc_off, unsigned char stream_block[16],
                            size_t len, unsigned char *in, unsigned char *out)
 {
     __m128i t1, t2, t3, t4;
@@ -350,10 +379,11 @@ static void encrypt_ctr192(void *this_state, void *this_key,
     __m128i *ks, state, b, *bi, *bo;
     unsigned int i, blocks, pblocks, rem;
 
-    state = _mm_load_si128((__m128i*)this_state);
+    state = _mm_loadu_si128((__m128i*)this_state);
     blocks = len / AES_BLOCK_SIZE;
     pblocks = blocks - (blocks % CTR_CRYPT_PARALLELISM);
     rem = len % AES_BLOCK_SIZE;
+    *nc_off = rem;
     bi = (__m128i*)in;
     bo = (__m128i*)out;
 
@@ -465,6 +495,7 @@ static void encrypt_ctr192(void *this_state, void *this_key,
 
         d1 = _mm_loadu_si128(&b);
         t1 = _mm_xor_si128(state, ks[0]);
+        state = increment_be(state);
 
         t1 = _mm_aesenc_si128(t1, ks[1]);
         t1 = _mm_aesenc_si128(t1, ks[2]);
@@ -479,17 +510,21 @@ static void encrypt_ctr192(void *this_state, void *this_key,
         t1 = _mm_aesenc_si128(t1, ks[11]);
 
         t1 = _mm_aesenclast_si128(t1, ks[12]);
+        _mm_storeu_si128((void *)stream_block, t1);
         t1 = _mm_xor_si128(t1, d1);
         _mm_storeu_si128(&b, t1);
 
         memcpy(bo + blocks, &b, rem);
     }
+
+    _mm_storeu_si128(this_state, state);
 }
 
 /**
  * AES-256 CTR encryption
  */
 static void encrypt_ctr256(void *this_state, void *this_key,
+                           size_t *nc_off, unsigned char stream_block[16],
                            size_t len, unsigned char *in, unsigned char *out)
 {
     __m128i t1, t2, t3, t4;
@@ -497,10 +532,11 @@ static void encrypt_ctr256(void *this_state, void *this_key,
     __m128i *ks, state, b, *bi, *bo;
     unsigned int i, blocks, pblocks, rem;
 
-    state = _mm_load_si128((__m128i*)this_state);
+    state = _mm_loadu_si128((__m128i*)this_state);
     blocks = len / AES_BLOCK_SIZE;
     pblocks = blocks - (blocks % CTR_CRYPT_PARALLELISM);
     rem = len % AES_BLOCK_SIZE;
+    *nc_off = rem;
     bi = (__m128i*)in;
     bo = (__m128i*)out;
 
@@ -622,6 +658,7 @@ static void encrypt_ctr256(void *this_state, void *this_key,
 
         d1 = _mm_loadu_si128(&b);
         t1 = _mm_xor_si128(state, ks[0]);
+        state = increment_be(state);
 
         t1 = _mm_aesenc_si128(t1, ks[1]);
         t1 = _mm_aesenc_si128(t1, ks[2]);
@@ -638,11 +675,14 @@ static void encrypt_ctr256(void *this_state, void *this_key,
         t1 = _mm_aesenc_si128(t1, ks[13]);
 
         t1 = _mm_aesenclast_si128(t1, ks[14]);
+        _mm_storeu_si128((void *)stream_block, t1);
         t1 = _mm_xor_si128(t1, d1);
         _mm_storeu_si128(&b, t1);
 
         memcpy(bo + blocks, &b, rem);
     }
+
+    _mm_storeu_si128(this_state, state);
 }
 
 #endif
