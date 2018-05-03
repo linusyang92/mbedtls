@@ -84,10 +84,10 @@ static void (*encrypt)(const unsigned char *in, unsigned char *out,
 static void (*decrypt)(const unsigned char *in, unsigned char *out,
     const AES_KEY *key) = AES_decrypt;
 
-static void aes_init()
+static inline void aes_init()
 {
     static int inited = 0;
-    if (!inited) {
+    if (MBEDTLS_UNLIKELY(!inited)) {
 #if MBEDTLS_AES_I386_WIN
         if (hardaes_supported()) {
             set_encrypt_key = aesni_set_encrypt_key;

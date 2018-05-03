@@ -14,6 +14,9 @@ int mbedtls_asm_supported(void);
 
 #if defined(__GNUC__)
 
+#define MBEDTLS_LIKELY(x)      __builtin_expect(!!(x), 1)
+#define MBEDTLS_UNLIKELY(x)    __builtin_expect(!!(x), 0)
+
 #if defined(__i386__) && defined(_WIN32)
   #define MBEDTLS_AES_USE_ASM 1
   #define MBEDTLS_AES_I386_WIN 1
@@ -32,6 +35,11 @@ int mbedtls_asm_supported(void);
     #define MBEDTLS_AES_MIPSBE_LINUX 1
   #endif
 #endif
+
+#else
+
+#define MBEDTLS_LIKELY(x)      (x)
+#define MBEDTLS_UNLIKELY(x)    (x)
 
 #endif
 
