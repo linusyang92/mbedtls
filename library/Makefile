@@ -16,7 +16,7 @@ ifdef ARM64
 LOCAL_CFLAGS += -march=armv8-a+crypto -mcpu=cortex-a53
 else
 ifdef ARM
-LOCAL_CFLAGS += -mfpu=neon
+LOCAL_CFLAGS += -march=armv7-a -mfloat-abi=softfp -mfpu=neon
 else
 ifndef NOINTEL
 LOCAL_CFLAGS += -maes -mssse3 -mavx2
