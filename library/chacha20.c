@@ -30,6 +30,32 @@
 #include MBEDTLS_CONFIG_FILE
 #endif
 
+#if defined(__i386__) || defined(__amd64__)
+#define MBEDTLS_CHACHA20_HASVEC
+#define MBEDTLS_CHACHA20_HASVEC_X86
+#define CPUID_EBX_AVX2    0x00000020
+#define CPUID_ECX_SSSE3   0x00000200
+#define CPUID_ECX_XSAVE   0x04000000
+#define CPUID_ECX_OSXSAVE 0x08000000
+#define CPUID_ECX_AVX     0x10000000
+#define XCR0_SSE 0x00000002
+#define XCR0_AVX 0x00000004
+#include <emmintrin.h>
+#include <immintrin.h>
+#include <smmintrin.h>
+#include <tmmintrin.h>
+#ifdef _WIN32
+#include <intrin.h>
+#endif
+#endif
+
+#if defined(__aarch64__) || \
+    (defined(__arm__) && __ARM_NEON__)
+#define MBEDTLS_CHACHA20_HASVEC
+#define MBEDTLS_CHACHA20_HASVEC_ARM
+#include <arm_neon.h>
+#endif
+
 #if defined(MBEDTLS_CHACHA20_C)
 
 #if !defined(MBEDTLS_CHACHA20_ALT)
@@ -283,6 +309,180 @@ int mbedtls_chacha20_keystream_block( const mbedtls_chacha20_context *ctx,
     return( 0 );
 }
 
+#ifdef MBEDTLS_CHACHA20_HASVEC
+#define ROUNDS 20
+#define SIMD_INIT \
+    uint32_t *x = ctx->initial_state; \
+    unsigned char __attribute__((unused)) *c = out; \
+    if (bytes == 0) { \
+        return; \
+    }
+#define SIMD_FUNC(plat) \
+static inline void mbedtls_chacha20_ ## plat ( \
+    mbedtls_chacha20_context *ctx, \
+    size_t bytes, \
+    const unsigned char *m, \
+    unsigned char *out )
+#define SIMD_SUPPORT(plat, id) \
+static const int __attribute__((unused)) mbedtls_cpu_has_ ## plat = id; \
+static inline int mbedtls_chacha20_support_ ## plat (void)
+#endif
+
+#ifdef MBEDTLS_CHACHA20_HASVEC_X86
+static void
+get_cpuid(unsigned int cpu_info[4U], const unsigned int cpu_info_type)
+{
+    cpu_info[0] = cpu_info[1] = cpu_info[2] = cpu_info[3] = 0;
+# ifdef __i386__
+    __asm__ __volatile__(
+        "pushfl; pushfl; "
+        "popl %0; "
+        "movl %0, %1; xorl %2, %0; "
+        "pushl %0; "
+        "popfl; pushfl; popl %0; popfl"
+        : "=&r"(cpu_info[0]), "=&r"(cpu_info[1])
+        : "i"(0x200000));
+    if (((cpu_info[0] ^ cpu_info[1]) & 0x200000) == 0x0) {
+        return; /* LCOV_EXCL_LINE */
+    }
+# endif
+# ifdef __i386__
+    __asm__ __volatile__("xchgl %%ebx, %k1; cpuid; xchgl %%ebx, %k1"
+                         : "=a"(cpu_info[0]), "=&r"(cpu_info[1]),
+                           "=c"(cpu_info[2]), "=d"(cpu_info[3])
+                         : "0"(cpu_info_type), "2"(0U));
+# elif defined(__x86_64__)
+    __asm__ __volatile__("xchgq %%rbx, %q1; cpuid; xchgq %%rbx, %q1"
+                         : "=a"(cpu_info[0]), "=&r"(cpu_info[1]),
+                           "=c"(cpu_info[2]), "=d"(cpu_info[3])
+                         : "0"(cpu_info_type), "2"(0U));
+# else
+    __asm__ __volatile__("cpuid"
+                         : "=a"(cpu_info[0]), "=b"(cpu_info[1]),
+                           "=c"(cpu_info[2]), "=d"(cpu_info[3])
+                         : "0"(cpu_info_type), "2"(0U));
+# endif
+}
+
+static int
+runtime_intel_cpu_features(int feature);
+
+SIMD_SUPPORT(avx2, 1)
+{
+    static int inited = 0;
+    static int supported = 0;
+    if (inited) {
+        return supported;
+    } else {
+        supported = runtime_intel_cpu_features(mbedtls_cpu_has_avx2);
+        inited = 1;
+    }
+    return supported;
+}
+
+SIMD_FUNC(avx2)
+{
+    SIMD_INIT
+#include "chacha_x86_u8.h"
+#include "chacha_x86_u4.h"
+#include "chacha_x86_u1.h"
+#include "chacha_x86_u0.h"
+}
+
+SIMD_SUPPORT(ssse3, 2)
+{
+    static int inited = 0;
+    static int supported = 0;
+    if (inited) {
+        return supported;
+    } else {
+        supported = runtime_intel_cpu_features(mbedtls_cpu_has_ssse3);
+        inited = 1;
+    }
+    return supported;
+}
+
+SIMD_FUNC(ssse3)
+{
+    SIMD_INIT
+#include "chacha_x86_u4.h"
+#include "chacha_x86_u1.h"
+#include "chacha_x86_u0.h"
+}
+
+static int
+runtime_intel_cpu_features(int feature)
+{
+    static int inited = 0;
+    static int has_avx2 = 0;
+    static int has_ssse3 = 0;
+
+    if (!inited) {
+        unsigned int id;
+        unsigned int cpu_info[4] = {0};
+        int has_avx = 0;
+
+        get_cpuid(cpu_info, 0x0);
+        if ((id = cpu_info[0]) == 0U) {
+            return -1; /* LCOV_EXCL_LINE */
+        }
+        get_cpuid(cpu_info, 0x00000001);
+
+        has_ssse3 = ((cpu_info[2] & CPUID_ECX_SSSE3) != 0x0);
+
+        has_avx = 0;
+        if ((cpu_info[2] & (CPUID_ECX_AVX | CPUID_ECX_XSAVE | CPUID_ECX_OSXSAVE)) ==
+            (CPUID_ECX_AVX | CPUID_ECX_XSAVE | CPUID_ECX_OSXSAVE)) {
+            uint32_t xcr0 = 0U;
+# ifdef _WIN32
+            xcr0 = (uint32_t) _xgetbv(0);
+# else
+            __asm__ __volatile__(".byte 0x0f, 0x01, 0xd0" /* XGETBV */
+                                 : "=a"(xcr0)
+                                 : "c"((uint32_t) 0U)
+                                 : "%edx");
+# endif
+            if ((xcr0 & (XCR0_SSE | XCR0_AVX)) == (XCR0_SSE | XCR0_AVX)) {
+                has_avx = 1;
+            }
+        }
+
+        has_avx2 = 0;
+        if (has_avx) {
+            unsigned int cpu_info7[4];
+
+            get_cpuid(cpu_info7, 0x00000007);
+            has_avx2 = ((cpu_info7[1] & CPUID_EBX_AVX2) != 0x0);
+        }
+
+        inited = 1;
+    }
+
+    if (feature == mbedtls_cpu_has_avx2) {
+        return has_avx2;
+    }
+    if (feature == mbedtls_cpu_has_ssse3) {
+        return has_ssse3;
+    }
+    return 0;
+}
+#endif
+
+#ifdef MBEDTLS_CHACHA20_HASVEC_ARM
+SIMD_SUPPORT(neon, 3)
+{
+    // No need of runtime check if the compiler already supports
+    return 1;
+}
+
+SIMD_FUNC(neon)
+{
+    SIMD_INIT
+#include "chacha_arm_u4.h"
+#include "chacha_arm_u1.h"
+}
+#endif
+
 int mbedtls_chacha20_update( mbedtls_chacha20_context *ctx,
                               size_t size,
                               const unsigned char *input,
@@ -312,6 +512,23 @@ int mbedtls_chacha20_update( mbedtls_chacha20_context *ctx,
     }
 
     /* Process full blocks */
+#ifdef MBEDTLS_CHACHA20_HASVEC_X86
+    if (mbedtls_chacha20_support_avx2()) {
+        mbedtls_chacha20_avx2( ctx, size, input + offset, output + offset );
+        return( 0 );
+    }
+    if (mbedtls_chacha20_support_ssse3()) {
+        mbedtls_chacha20_ssse3( ctx, size, input + offset, output + offset );
+        return( 0 );
+    }
+#endif
+#ifdef MBEDTLS_CHACHA20_HASVEC_ARM
+    if (mbedtls_chacha20_support_neon()) {
+        mbedtls_chacha20_neon( ctx, size, input + offset, output + offset );
+        offset += size - size % CHACHA20_BLOCK_SIZE_BYTES;
+        size = size % CHACHA20_BLOCK_SIZE_BYTES;
+    }
+#endif
     while ( size >= CHACHA20_BLOCK_SIZE_BYTES )
     {
         mbedtls_chacha20_block( ctx->initial_state, ctx->working_state, &output[offset] );
@@ -554,14 +771,14 @@ static const size_t test_lengths[2] =
 int mbedtls_chacha20_self_test( int verbose )
 {
     unsigned char output[381];
-    size_t i;
+    unsigned int i;
     int result;
 
     for ( i = 0U; i < 2U; i++ )
     {
         if ( verbose != 0 )
         {
-            mbedtls_printf( "  ChaCha20 test %zu ", i );
+            mbedtls_printf( "  ChaCha20 test %u ", i );
         }
 
         result = mbedtls_chacha20_crypt( test_keys[i],
