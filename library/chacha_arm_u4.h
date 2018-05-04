@@ -24,7 +24,6 @@ Public domain.
    x_##a = vaddq_u32(x_##a, x_##b); t_##a = veorq_u32(x_##d, x_##a); x_##d = VEC4_ROT(t_##a,  8); \
    x_##c = vaddq_u32(x_##c, x_##d); t_##c = veorq_u32(x_##b, x_##c); x_##b = VEC4_ROT(t_##c,  7)
 
-  if (!bytes) return;
 if (bytes>=256) {
   int i;
   uint32_t in12, in13;

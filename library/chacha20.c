@@ -313,7 +313,6 @@ int mbedtls_chacha20_keystream_block( const mbedtls_chacha20_context *ctx,
 #define ROUNDS 20
 #define SIMD_INIT \
     uint32_t *x = ctx->initial_state; \
-    unsigned char __attribute__((unused)) *c = out; \
     if (bytes == 0) { \
         return; \
     }
@@ -382,6 +381,7 @@ SIMD_SUPPORT(avx2, 1)
 
 SIMD_FUNC(avx2)
 {
+    unsigned char *c = out;
     SIMD_INIT
 #include "chacha_x86_u8.h"
 #include "chacha_x86_u4.h"
@@ -404,6 +404,7 @@ SIMD_SUPPORT(ssse3, 2)
 
 SIMD_FUNC(ssse3)
 {
+    unsigned char *c = out;
     SIMD_INIT
 #include "chacha_x86_u4.h"
 #include "chacha_x86_u1.h"
@@ -424,7 +425,7 @@ runtime_intel_cpu_features(int feature)
 
         get_cpuid(cpu_info, 0x0);
         if ((id = cpu_info[0]) == 0U) {
-            return -1; /* LCOV_EXCL_LINE */
+            return 0; /* LCOV_EXCL_LINE */
         }
         get_cpuid(cpu_info, 0x00000001);
 
@@ -480,6 +481,7 @@ SIMD_FUNC(neon)
     SIMD_INIT
 #include "chacha_arm_u4.h"
 #include "chacha_arm_u1.h"
+#include "chacha_arm_u0.h"
 }
 #endif
 
@@ -525,8 +527,7 @@ int mbedtls_chacha20_update( mbedtls_chacha20_context *ctx,
 #ifdef MBEDTLS_CHACHA20_HASVEC_ARM
     if (mbedtls_chacha20_support_neon()) {
         mbedtls_chacha20_neon( ctx, size, input + offset, output + offset );
-        offset += size - size % CHACHA20_BLOCK_SIZE_BYTES;
-        size = size % CHACHA20_BLOCK_SIZE_BYTES;
+        return( 0 );
     }
 #endif
     while ( size >= CHACHA20_BLOCK_SIZE_BYTES )

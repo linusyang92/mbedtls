@@ -8,10 +8,10 @@ Public domain.
 /* helper */
 #define vrotlq_u32(a,b) vsliq_n_u32(vshrq_n_u32(a, 32-b),a,b)
 
-  while (bytes >=64) {
+  if (bytes > 0) {
     uint32x4_t x_0, x_1, x_2, x_3;
-    int i;
-    uint32_t in12, in13;
+    unsigned int i;
+    uint8_t *partialblock = ctx->keystream8;
 
     x_0 = vld1q_u32(x +  0);
     x_1 = vld1q_u32(x +  4);
@@ -81,26 +81,18 @@ Public domain.
     x_1 = vaddq_u32(x_1, vld1q_u32(x +  4));
     x_2 = vaddq_u32(x_2, vld1q_u32(x +  8));
     x_3 = vaddq_u32(x_3, vld1q_u32(x + 12));
-    x_0 = veorq_u32(x_0, vld1q_u32((uint32_t*)(m +  0)));
-    x_1 = veorq_u32(x_1, vld1q_u32((uint32_t*)(m + 16)));
-    x_2 = veorq_u32(x_2, vld1q_u32((uint32_t*)(m + 32)));
-    x_3 = veorq_u32(x_3, vld1q_u32((uint32_t*)(m + 48)));
-    vst1q_u32((uint32_t*)(out +  0),  x_0);
-    vst1q_u32((uint32_t*)(out + 16),  x_1);
-    vst1q_u32((uint32_t*)(out + 32),  x_2);
-    vst1q_u32((uint32_t*)(out + 48),  x_3);
+    vst1q_u32((uint32_t*)(partialblock +  0),  x_0);
+    vst1q_u32((uint32_t*)(partialblock + 16),  x_1);
+    vst1q_u32((uint32_t*)(partialblock + 32),  x_2);
+    vst1q_u32((uint32_t*)(partialblock + 48),  x_3);
     
-    in12 = x[12];
-    in13 = x[13];
-    in12 ++;
-    if (in12 == 0)
-      in13 ++;
-    x[12] = in12;
-    x[13] = in13;
+    for (i = 0; i < bytes; i++) {
+        out[i] = m[i] ^ partialblock[i];
+    }
+    ctx->keystream_bytes_used = bytes;
 
-    bytes -= 64;
-    out += 64;
-    m += 64;
+    /* Increment counter */
+    ctx->initial_state[CHACHA20_CTR_INDEX]++;
   }
 
 #undef vrotlq_u32
