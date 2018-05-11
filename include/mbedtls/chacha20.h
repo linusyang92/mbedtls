@@ -37,6 +37,27 @@
 #include <stddef.h>
 
 #define MBEDTLS_ERR_CHACHA20_BAD_INPUT_DATA -0x0011 /**< Invalid input parameter(s). */
+#define CHACHA20_CTR_INDEX ( 12U )
+
+#if defined(__i386__) || defined(__amd64__)
+#define MBEDTLS_CHACHA20_HASVEC
+#define MBEDTLS_CHACHA20_HASVEC_X86
+#endif
+
+#if defined(__aarch64__) || \
+    (defined(__arm__) && __ARM_NEON__)
+#define MBEDTLS_CHACHA20_HASVEC
+#define MBEDTLS_CHACHA20_HASVEC_ARM
+#endif
+
+#ifdef MBEDTLS_CHACHA20_HASVEC
+#define CHACHA20_SIMD_FUNC(plat) \
+void mbedtls_chacha20_ ## plat ( \
+    mbedtls_chacha20_context *ctx, \
+    size_t bytes, \
+    const unsigned char *m, \
+    unsigned char *out )
+#endif
 
 typedef struct
 {
