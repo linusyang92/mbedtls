@@ -1557,7 +1557,13 @@ int mbedtls_aes_self_test( int verbose )
     }
 
     if( verbose != 0 )
+    {
+        i = mbedtls_asm_supported();
         mbedtls_printf( "\n" );
+        mbedtls_printf( "  AES asm support level: %s\n",
+                        i == MBEDTLS_AESASM_HAS_HARDAES ? "hardware" :
+                        (i == MBEDTLS_AESASM_HAS_ASM ? "asm" : "none") );
+    }
 #endif /* MBEDTLS_CIPHER_MODE_CTR */
 
     ret = 0;
