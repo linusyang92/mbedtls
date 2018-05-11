@@ -19,7 +19,7 @@ ifdef ARM
 LOCAL_CFLAGS += -march=armv7-a -mfloat-abi=softfp -mfpu=neon
 else
 ifndef NOINTEL
-LOCAL_CFLAGS += -maes -mssse3
+LOCAL_CFLAGS += -maes -mssse3 -mavx2
 endif
 endif
 endif

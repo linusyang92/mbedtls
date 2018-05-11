@@ -31,7 +31,6 @@
 #endif
 
 #if defined(__i386__) || defined(__amd64__)
-#define MBEDTLS_USE_AVX 0
 #define MBEDTLS_CHACHA20_HASVEC
 #define MBEDTLS_CHACHA20_HASVEC_X86
 #define CPUID_EBX_AVX2    0x00000020
@@ -367,7 +366,6 @@ get_cpuid(unsigned int cpu_info[4U], const unsigned int cpu_info_type)
 static int
 runtime_intel_cpu_features(int feature);
 
-#if MBEDTLS_USE_AVX
 SIMD_SUPPORT(avx2, 1)
 {
     static int inited = 0;
@@ -390,7 +388,6 @@ SIMD_FUNC(avx2)
 #include "chacha_x86_u1.h"
 #include "chacha_x86_u0.h"
 }
-#endif
 
 SIMD_SUPPORT(ssse3, 2)
 {
@@ -418,17 +415,13 @@ static int
 runtime_intel_cpu_features(int feature)
 {
     static int inited = 0;
-#if MBEDTLS_USE_AVX
     static int has_avx2 = 0;
-#endif
     static int has_ssse3 = 0;
 
     if (!inited) {
         unsigned int id;
         unsigned int cpu_info[4] = {0};
-#if MBEDTLS_USE_AVX
         int has_avx = 0;
-#endif
 
         get_cpuid(cpu_info, 0x0);
         if ((id = cpu_info[0]) == 0U) {
@@ -438,7 +431,6 @@ runtime_intel_cpu_features(int feature)
 
         has_ssse3 = ((cpu_info[2] & CPUID_ECX_SSSE3) != 0x0);
 
-#if MBEDTLS_USE_AVX
         has_avx = 0;
         if ((cpu_info[2] & (CPUID_ECX_AVX | CPUID_ECX_XSAVE | CPUID_ECX_OSXSAVE)) ==
             (CPUID_ECX_AVX | CPUID_ECX_XSAVE | CPUID_ECX_OSXSAVE)) {
@@ -463,16 +455,13 @@ runtime_intel_cpu_features(int feature)
             get_cpuid(cpu_info7, 0x00000007);
             has_avx2 = ((cpu_info7[1] & CPUID_EBX_AVX2) != 0x0);
         }
-#endif
 
         inited = 1;
     }
 
-#if MBEDTLS_USE_AVX
     if (feature == mbedtls_cpu_has_avx2) {
         return has_avx2;
     }
-#endif
     if (feature == mbedtls_cpu_has_ssse3) {
         return has_ssse3;
     }
@@ -526,12 +515,10 @@ int mbedtls_chacha20_update( mbedtls_chacha20_context *ctx,
 
     /* Process full blocks */
 #ifdef MBEDTLS_CHACHA20_HASVEC_X86
-#if MBEDTLS_USE_AVX
     if (mbedtls_chacha20_support_avx2()) {
         mbedtls_chacha20_avx2( ctx, size, input + offset, output + offset );
         return( 0 );
     }
-#endif
     if (mbedtls_chacha20_support_ssse3()) {
         mbedtls_chacha20_ssse3( ctx, size, input + offset, output + offset );
         return( 0 );
