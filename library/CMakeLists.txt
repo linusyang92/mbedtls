@@ -122,6 +122,9 @@ set(ASM_EXT S)
 enable_language(ASM)
 set(CMAKE_ASM_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE}")
 set(CMAKE_ASM_FLAGS "${CMAKE_C_FLAGS}")
+if(NOT USE_STATIC_MBEDTLS_LIBRARY AND USE_SHARED_MBEDTLS_LIBRARY)
+    set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} -fPIC")
+endif()
 
 if(ARM64)
     set_source_files_properties(${src_simd}
