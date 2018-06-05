@@ -1,11 +1,15 @@
 option(USE_STATIC_MBEDTLS_LIBRARY "Build mbed TLS static library." ON)
 option(USE_SHARED_MBEDTLS_LIBRARY "Build mbed TLS shared library." OFF)
 option(LINK_WITH_PTHREAD "Explicitly link mbed TLS library to pthread." OFF)
+option(ARM64 "Target aarch64." OFF)
+option(ARM "Target arm." OFF)
+option(NOINTEL "Do not target x86/amd64." OFF)
 
 set(src_crypto
     aead_chacha20_poly1305.c
     aes.c
     aesni.c
+    aesasm_wrap.c
     arc4.c
     asn1parse.c
     asn1write.c
@@ -62,6 +66,26 @@ set(src_crypto
     xtea.c
 )
 
+set(src_asm
+    aesasm.S
+    aesasm_hard.S
+    md5asm.S
+    sha1asm.S
+    sha256asm.S
+)
+
+set(src_simd
+    aesarm.c
+    aesctr.c
+    chacha20_vec.c
+    sha1_armv8.c
+    sha256_armv8.c
+)
+
+set(src_avx
+    chacha20_avx.c
+)
+
 set(src_x509
     certs.c
     pkcs11.c
@@ -94,6 +118,32 @@ if(CMAKE_COMPILER_IS_CLANG)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wmissing-declarations -Wmissing-prototypes -Wdocumentation -Wno-documentation-deprecated-sync -Wunreachable-code")
 endif(CMAKE_COMPILER_IS_CLANG)
 
+set(ASM_EXT S)
+enable_language(ASM)
+set(CMAKE_ASM_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE}")
+set(CMAKE_ASM_FLAGS "${CMAKE_C_FLAGS}")
+
+if(ARM64)
+    set_source_files_properties(${src_simd}
+        PROPERTIES COMPILE_FLAGS "${CMAKE_C_FLAGS} -march=armv8-a+crypto -mcpu=cortex-a53"
+    )
+endif(ARM64)
+
+if(ARM)
+    set_source_files_properties(${src_simd}
+        PROPERTIES COMPILE_FLAGS "${CMAKE_C_FLAGS} -march=armv7-a -mfloat-abi=softfp -mfpu=neon"
+    )
+endif(ARM)
+
+if(NOT NOINTEL)
+    set_source_files_properties(${src_simd}
+        PROPERTIES COMPILE_FLAGS "${CMAKE_C_FLAGS} -maes -mssse3"
+    )
+    set_source_files_properties(${src_avx}
+        PROPERTIES COMPILE_FLAGS "${CMAKE_C_FLAGS} -mavx2"
+    )
+endif()
+
 if(WIN32)
     set(libs ${libs} ws2_32)
 endif(WIN32)
@@ -125,7 +175,7 @@ elseif(USE_STATIC_MBEDTLS_LIBRARY)
 endif()
 
 if(USE_STATIC_MBEDTLS_LIBRARY)
-    add_library(${mbedcrypto_static_target} STATIC ${src_crypto})
+    add_library(${mbedcrypto_static_target} STATIC ${src_crypto} ${src_asm} ${src_simd} ${src_avx})
     set_target_properties(${mbedcrypto_static_target} PROPERTIES OUTPUT_NAME mbedcrypto)
     target_link_libraries(${mbedcrypto_static_target} ${libs})
 
@@ -143,7 +193,7 @@ if(USE_STATIC_MBEDTLS_LIBRARY)
 endif(USE_STATIC_MBEDTLS_LIBRARY)
 
 if(USE_SHARED_MBEDTLS_LIBRARY)
-    add_library(mbedcrypto SHARED ${src_crypto})
+    add_library(mbedcrypto SHARED ${src_crypto} ${src_asm} ${src_simd} ${src_avx})
     set_target_properties(mbedcrypto PROPERTIES VERSION 2.7.1 SOVERSION 2)
     target_link_libraries(mbedcrypto ${libs})
 
